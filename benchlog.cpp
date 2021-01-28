@@ -338,4 +338,21 @@ void BM_LinearSearch2(benchmark::State& state) {
 }
 BENCHMARK(BM_LinearSearch2);
 
+void BM_LogCast(benchmark::State& state) {
+  uint64_t vtab[10];
+  uint64_t v = 1;
+  for (int i = 0; i < 10; ++i) {
+    vtab[i] = v;
+    v *= 10;
+  }
+  uint32_t r = 0;
+  size_t i = 0;
+  while (state.KeepRunning()) {
+    r += log2rough((double) vtab[i]);
+    i = (i >= 9) ? 0 : i+1;
+  }
+  dummydouble += r;
+}
+BENCHMARK(BM_LogCast);
+
 BENCHMARK_MAIN();
