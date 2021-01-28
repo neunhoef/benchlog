@@ -162,45 +162,75 @@ static void BM_Log2Rough(benchmark::State& state) {
   uint32_t r = 0;
   size_t i = 0;
   for (auto _ : state) {
-    benchmark::DoNotOptimize(r += log2rough(vtab[i]));
+    benchmark::DoNotOptimize(r += log2rough(vtab[i]) >> 3);
     i = (i >= 9) ? 0 : i+1;
   }
   dummydouble += r;
 }
 BENCHMARK(BM_Log2Rough);
 
-void BM_log(benchmark::State& state) {
+void BM_log_random(benchmark::State& state) {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<double> dis(1, 10);
   auto s = dis(gen);
   double y;
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     benchmark::DoNotOptimize(y = std::log(s));
   }
 }
-void BM_log2(benchmark::State& state) {
+void BM_log2_random(benchmark::State& state) {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<double> dis(1, 10);
   auto s = dis(gen);
   double y;
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     benchmark::DoNotOptimize(y = std::log2(s));
   }
+  dummydouble += y;
 }
-void BM_log2r(benchmark::State& state) {
+void BM_log2r_random(benchmark::State& state) {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<double> dis(1, 10);
   auto s = dis(gen);
-  double y;
-  while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(y = log2rough(s));
+  uint32_t y = 0;
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(y *= log2rough(s) >> 3);
   }
+  dummy64 += y;
 }
-BENCHMARK(BM_log);
-BENCHMARK(BM_log2);
-BENCHMARK(BM_log2r);
+BENCHMARK(BM_log_random);
+BENCHMARK(BM_log2_random);
+BENCHMARK(BM_log2r_random);
+
+static double table[9] = {1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8 };
+
+static inline size_t findBucket(double d) {
+  for (size_t i = 0; i < 9; ++i) {
+    if (d <= table[i]) {
+      return i;
+    }
+  }
+  return 9;
+}
+
+void BM_LinearSearch(benchmark::State& state) {
+  double vtab[10];
+  double v = 1.0;
+  for (int i = 0; i < 10; ++i) {
+    vtab[i] = v;
+    v *= 10.0;
+  }
+  uint32_t r = 0;
+  size_t i = 0;
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(r += findBucket(vtab[i]));
+    i = (i >= 9) ? 0 : i+1;
+  }
+  dummydouble += r;
+}
+BENCHMARK(BM_LinearSearch);
 
 BENCHMARK_MAIN();
