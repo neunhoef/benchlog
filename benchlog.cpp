@@ -216,6 +216,20 @@ static inline size_t findBucket(double d) {
   return 9;
 }
 
+static inline size_t findBucket2(double d) {
+  size_t r = 0;
+  r = (d <= table[0]) ? 0 : r;
+  r = (d <= table[1]) ? 1 : r;
+  r = (d <= table[2]) ? 2 : r;
+  r = (d <= table[3]) ? 3 : r;
+  r = (d <= table[4]) ? 4 : r;
+  r = (d <= table[5]) ? 5 : r;
+  r = (d <= table[6]) ? 6 : r;
+  r = (d <= table[7]) ? 7 : r;
+  r = (d <= table[8]) ? 8 : r;
+  return r;
+}
+
 void BM_LinearSearch(benchmark::State& state) {
   double vtab[10];
   double v = 1.0;
@@ -232,5 +246,22 @@ void BM_LinearSearch(benchmark::State& state) {
   dummydouble += r;
 }
 BENCHMARK(BM_LinearSearch);
+
+void BM_LinearSearch2(benchmark::State& state) {
+  double vtab[10];
+  double v = 1.0;
+  for (int i = 0; i < 10; ++i) {
+    vtab[i] = v;
+    v *= 10.0;
+  }
+  uint32_t r = 0;
+  size_t i = 0;
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(r += findBucket2(vtab[i]));
+    i = (i >= 9) ? 0 : i+1;
+  }
+  dummydouble += r;
+}
+BENCHMARK(BM_LinearSearch2);
 
 BENCHMARK_MAIN();
