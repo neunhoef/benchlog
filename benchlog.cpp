@@ -13,7 +13,6 @@ static uint64_t dummy64 = 0;
 static float dummyfloat = 0;
 static double dummydouble = 0;
 
-#if 0
 static void BM_OurHistogram(benchmark::State& state) {
   constexpr float const base = 10.0;
   constexpr float const low = 0;
@@ -34,7 +33,7 @@ static void BM_OurHistogram(benchmark::State& state) {
     counts[i] = 0;
   }
   float v = 1.0;
-  for (auto _ : state) {
+  while (state.KeepRunning()) {
     size_t x = static_cast<size_t>(1+std::floor(log((v - low)/div)/lbase));
     counts[x]++;
     v += 1.0;
@@ -75,7 +74,7 @@ static void BM_NewHistogram(benchmark::State& state) {
     counts[i] = 0;
   }
   float v = 1.0;
-  for (auto _ : state) {
+  while (state.KeepRunning()) {
     uint32_t x = ((uint32_t) (((uint64_t) v >> 52) & 0x7ff)) / 10;
     counts[x]++;
     v += 1.0;
@@ -95,7 +94,6 @@ static void BM_NewHistogram(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_NewHistogram);
-#endif
 
 template<typename T>
 void BM_Log2Empty(benchmark::State& state) {
