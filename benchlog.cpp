@@ -5,6 +5,7 @@
 #include "string.h"
 #include <random>
 #include <chrono>
+#include <atomic>
 
 #include <benchmark/benchmark.h>
 
@@ -54,7 +55,7 @@ static void BM_OurHistogram(benchmark::State& state) {
 }
 BENCHMARK(BM_OurHistogram);
 
-static void BM_NewHistogram(benchmark::State& state) {
+static void BM_NewHistogramFirstTry(benchmark::State& state) {
   constexpr float const base = 10.0;
   constexpr float const low = 0;
   constexpr float const high = 1000;
@@ -93,7 +94,7 @@ static void BM_NewHistogram(benchmark::State& state) {
     dummy64 += counts[i];
   }
 }
-BENCHMARK(BM_NewHistogram);
+BENCHMARK(BM_NewHistogramFirstTry);
 
 template<typename T>
 void BM_Log2Empty(benchmark::State& state) {
@@ -364,4 +365,61 @@ void BM_steadyclock(benchmark::State& state) {
   dummy64 += std::chrono::duration(end - start).count();
 }
 BENCHMARK(BM_steadyclock);
+
+void BM_atomic_seq_cst(benchmark::State& state) {
+  std::atomic<uint64_t> a(0);
+  while (state.KeepRunning()) {
+    ++a;
+  }
+}
+BENCHMARK(BM_atomic_seq_cst);
+
+void BM_atomic_relaxed(benchmark::State& state) {
+  std::atomic<uint64_t> a(0);
+  while (state.KeepRunning()) {
+    a.fetch_add(1, std::memory_order_relaxed);
+  }
+}
+BENCHMARK(BM_atomic_relaxed);
+
+static std::atomic<uint64_t> counts[10];
+static void initHisto() {
+  for (size_t i = 0; i < 10; ++i) {
+    counts[i] = 0;
+  }
+}
+
+static void countHisto(double v) {
+  counts[log2rough(v) / 3].fetch_add(1, std::memory_order_relaxed);
+}
+static void countHisto(float v) {
+  counts[log2rough(v) / 3].fetch_add(1, std::memory_order_relaxed);
+}
+static void countHisto(uint64_t v) {
+  counts[log2rough((double) v) / 3].fetch_add(1, std::memory_order_relaxed);
+}
+static void countHisto(uint32_t v) {
+  counts[log2rough((double) v) / 3].fetch_add(1, std::memory_order_relaxed);
+}
+
+template<typename T>
+static void BM_NewHistogram(benchmark::State& state) {
+  initHisto();
+  T vtab[10];
+  T v = 1;
+  for (int i = 0; i < 10; ++i) {
+    vtab[i] = v;
+    v *= 8;
+  }
+  size_t i = 0;
+  while (state.KeepRunning()) {
+    countHisto(vtab[i]);
+    i = (i >= 9) ? 0 : i+1;
+  }
+}
+BENCHMARK_TEMPLATE(BM_NewHistogram, float);
+BENCHMARK_TEMPLATE(BM_NewHistogram, double);
+BENCHMARK_TEMPLATE(BM_NewHistogram, uint64_t);
+BENCHMARK_TEMPLATE(BM_NewHistogram, uint32_t);
+
 BENCHMARK_MAIN();
