@@ -361,9 +361,7 @@ void BM_steadyclock(benchmark::State& state) {
   auto end = std::chrono::steady_clock::now();
   while (state.KeepRunning()) {
     //benchmark::DoNotOptimize(x += std::chrono::duration(std::chrono::steady_clock::now() - start).count());
-    std::cout << "Start";
     benchmark::DoNotOptimize(end = std::chrono::steady_clock::now());
-    std::cout << "End";
   }
   dummy64 += std::chrono::duration(end - start).count();
 }
