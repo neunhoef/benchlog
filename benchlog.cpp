@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include "string.h"
+#include <random>
 
 #include <benchmark/benchmark.h>
 
@@ -169,21 +170,33 @@ static void BM_Log2Rough(benchmark::State& state) {
 BENCHMARK(BM_Log2Rough);
 
 void BM_log(benchmark::State& state) {
-  volatile double x = 3.0;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(1, 10);
+  auto s = dis(gen);
+  double y;
   while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(std::log(x));
+    benchmark::DoNotOptimize(y = std::log(s));
   }
 }
 void BM_log2(benchmark::State& state) {
-  volatile double x = 3.0;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(1, 10);
+  auto s = dis(gen);
+  double y;
   while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(std::log2(x));
+    benchmark::DoNotOptimize(y = std::log2(s));
   }
 }
 void BM_log2r(benchmark::State& state) {
-  volatile double x = 3.0;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(1, 10);
+  auto s = dis(gen);
+  double y;
   while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(log2rough(x));
+    benchmark::DoNotOptimize(y = log2rough(s));
   }
 }
 BENCHMARK(BM_log);
