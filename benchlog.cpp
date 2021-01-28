@@ -4,6 +4,7 @@
 #include <vector>
 #include "string.h"
 #include <random>
+#include <chrono>
 
 #include <benchmark/benchmark.h>
 
@@ -355,4 +356,16 @@ void BM_LogCast(benchmark::State& state) {
 }
 BENCHMARK(BM_LogCast);
 
+void BM_steadyclock(benchmark::State& state) {
+  auto start = std::chrono::steady_clock::now();
+  auto end = std::chrono::steady_clock::now();
+  while (state.KeepRunning()) {
+    //benchmark::DoNotOptimize(x += std::chrono::duration(std::chrono::steady_clock::now() - start).count());
+    std::cout << "Start";
+    benchmark::DoNotOptimize(end = std::chrono::steady_clock::now());
+    std::cout << "End";
+  }
+  dummy64 += std::chrono::duration(end - start).count();
+}
+BENCHMARK(BM_steadyclock);
 BENCHMARK_MAIN();
