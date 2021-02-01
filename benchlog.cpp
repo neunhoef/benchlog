@@ -441,4 +441,5 @@ static void BM_OldFullHistogram(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_OldFullHistogram);
+
 BENCHMARK_MAIN();
