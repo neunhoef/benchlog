@@ -8,7 +8,7 @@
 #include <atomic>
 
 #include <benchmark/benchmark.h>
-//#include "logscale.h"
+#include "logscale.h"
 
 static int count = 0;
 static uint64_t dummy64 = 0;
@@ -419,7 +419,6 @@ BENCHMARK_TEMPLATE(BM_NewHistogram, double);
 BENCHMARK_TEMPLATE(BM_NewHistogram, uint64_t);
 BENCHMARK_TEMPLATE(BM_NewHistogram, uint32_t);
 
-/*
 static void BM_OldFullHistogram(benchmark::State& state) {
   log_scale_t<double> scale(10, 1, pow(10, 9), 10);
   std::vector<std::atomic<uint64_t>> counts(10);
@@ -442,5 +441,4 @@ static void BM_OldFullHistogram(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_OldFullHistogram);
-*/
 BENCHMARK_MAIN();
