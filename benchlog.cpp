@@ -8,7 +8,7 @@
 #include <atomic>
 
 #include <benchmark/benchmark.h>
-#include "logscale.h"
+//#include "logscale.h"
 
 static int count = 0;
 static uint64_t dummy64 = 0;
@@ -356,32 +356,28 @@ void BM_LogCast(benchmark::State& state) {
 }
 BENCHMARK(BM_LogCast);
 
-void BM_steadyclock(benchmark::State& state) {
-  auto start = std::chrono::steady_clock::now();
-  auto end = std::chrono::steady_clock::now();
+template<typename T>
+void BM_clock(benchmark::State& state) {
+  auto start = T::now();
+  auto end = T::now();
   while (state.KeepRunning()) {
     //benchmark::DoNotOptimize(x += std::chrono::duration(std::chrono::steady_clock::now() - start).count());
-    benchmark::DoNotOptimize(end = std::chrono::steady_clock::now());
+    benchmark::DoNotOptimize(end = T::now());
   }
   dummy64 += std::chrono::duration(end - start).count();
 }
-BENCHMARK(BM_steadyclock);
+BENCHMARK_TEMPLATE(BM_clock, std::chrono::steady_clock);
+BENCHMARK_TEMPLATE(BM_clock, std::chrono::system_clock);
+BENCHMARK_TEMPLATE(BM_clock, std::chrono::high_resolution_clock);
 
-void BM_atomic_seq_cst(benchmark::State& state) {
+void BM_atomic(benchmark::State& state, std::memory_order mo) {
   std::atomic<uint64_t> a(0);
   while (state.KeepRunning()) {
-    ++a;
+    benchmark::DoNotOptimize(a.fetch_add(1, mo));
   }
 }
-BENCHMARK(BM_atomic_seq_cst);
-
-void BM_atomic_relaxed(benchmark::State& state) {
-  std::atomic<uint64_t> a(0);
-  while (state.KeepRunning()) {
-    a.fetch_add(1, std::memory_order_relaxed);
-  }
-}
-BENCHMARK(BM_atomic_relaxed);
+BENCHMARK_CAPTURE(BM_atomic, memory_order_seq_cst, std::memory_order_seq_cst);
+BENCHMARK_CAPTURE(BM_atomic, memory_order_relaxed, std::memory_order_relaxed);
 
 static std::atomic<uint64_t> counts[10];
 static void initHisto() {
@@ -423,6 +419,7 @@ BENCHMARK_TEMPLATE(BM_NewHistogram, double);
 BENCHMARK_TEMPLATE(BM_NewHistogram, uint64_t);
 BENCHMARK_TEMPLATE(BM_NewHistogram, uint32_t);
 
+/*
 static void BM_OldFullHistogram(benchmark::State& state) {
   log_scale_t<double> scale(10, 1, pow(10, 9), 10);
   std::vector<std::atomic<uint64_t>> counts(10);
@@ -445,5 +442,5 @@ static void BM_OldFullHistogram(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_OldFullHistogram);
-
+*/
 BENCHMARK_MAIN();
