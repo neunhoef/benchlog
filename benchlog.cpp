@@ -356,10 +356,20 @@ void BM_LogCast(benchmark::State& state) {
 }
 BENCHMARK(BM_LogCast);
 
+void BM_clock_gettime (benchmark::State& state) {
+  struct timespec start, end;
+  clock_gettime(CLOCK_REALTIME, &start);
+  while (state.KeepRunning()) {
+    benchmark::DoNotOptimize(clock_gettime(CLOCK_REALTIME, &end));
+  }
+  dummy64 += end.tv_nsec - start.tv_nsec;
+}
+BENCHMARK(BM_clock_gettime);
+
 template<typename T>
 void BM_clock(benchmark::State& state) {
   auto start = T::now();
-  auto end = T::now();
+  std::chrono::time_point<T> end;
   while (state.KeepRunning()) {
     //benchmark::DoNotOptimize(x += std::chrono::duration(std::chrono::steady_clock::now() - start).count());
     benchmark::DoNotOptimize(end = T::now());
