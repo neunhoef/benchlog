@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string.h>
+#include <time.h>
 
 static inline uint32_t log2rough(double x) {
   uint64_t y;
@@ -20,5 +21,12 @@ int main(int argc, char* argv[]) {
   std::cout << "v=" << v << std::endl;
   uint32_t r = log2rough(v);
   std::cout << "result is: " << r << std::endl;
+  struct timespec ts;
+  clock_getres(CLOCK_MONOTONIC, &ts);
+  std::cout << "Accuracy monotonic clock_gettime: " << ts.tv_sec << " s + " << ts.tv_nsec << " ns" << std::endl;
+  clock_getres(CLOCK_MONOTONIC_COARSE, &ts);
+  std::cout << "Accuracy monotonic clock_gettime coarse: " << ts.tv_sec << " s + " << ts.tv_nsec << " ns" << std::endl;
+  clock_getres(CLOCK_MONOTONIC_RAW, &ts);
+  std::cout << "Accuracy monotonic clock_gettime raw: " << ts.tv_sec << " s + " << ts.tv_nsec << " ns" << std::endl;
   return 0;
 }
