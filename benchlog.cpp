@@ -27,7 +27,7 @@ static void BM_OurHistogram(benchmark::State& state) {
     i = (high - low) * std::pow(base, nn) + low;
     nn += 1.0;
   }
-  float const div = (high - low) * std::pow(base, -10);
+  float const div = log((high - low) * std::pow(base, -10));
   float const lbase = std::log(base);
 
   uint64_t counts[n];
@@ -36,7 +36,7 @@ static void BM_OurHistogram(benchmark::State& state) {
   }
   float v = 1.0;
   while (state.KeepRunning()) {
-    size_t x = static_cast<size_t>(1+std::floor(log((v - low)/div)/lbase));
+    size_t x = static_cast<size_t>(1+std::floor((log(v - low)-div)/lbase));
     counts[x]++;
     v += 1.0;
     v = (v > 999.0) ? 1.0 : v;
@@ -219,66 +219,100 @@ BENCHMARK_TEMPLATE(BM_Log2Rough, double);
 BENCHMARK_TEMPLATE(BM_Log2Rough, uint64_t);
 BENCHMARK_TEMPLATE(BM_Log2Rough, uint32_t);
 
+
 template<typename T>
 void BM_log(benchmark::State& state) {
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  T s, y;
-  if constexpr (std::is_integral<T>::value) {
-    std::uniform_int_distribution<T> dis(1,100000);
-    s = dis(gen);
-  } else {
-    std::uniform_real_distribution<T> dis(1,100000);
-    s = dis(gen);
-  }
-  while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(y = std::log(s));
-  }
-  dummydouble += y;
-}
-template<typename T>
-void BM_log2(benchmark::State& state) {
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  T s, y;
-  if constexpr (std::is_integral<T>::value) {
-    std::uniform_int_distribution<T> dis(1,100000);
-    s = dis(gen);
-  } else {
-    std::uniform_real_distribution<T> dis(1,100000);
-    s = dis(gen);
-  }
-  while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(y = std::log2(s));
-  }
-  dummydouble += y;
-}
-template<typename T>
-void BM_log2r(benchmark::State& state) {
+  std::vector<T> data;
+  uint32_t y;
   std::random_device rd;
   std::mt19937 gen(rd());
   T s;
-  if constexpr (std::is_integral<T>::value) {
-    std::uniform_int_distribution<T> dis(1,100000);
-    s = dis(gen);
-  } else {
-    std::uniform_real_distribution<T> dis(1,100000);
-    s = dis(gen);
-  }
-  uint32_t y;
-  while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(y = log2rough(s));
+  for (auto _ : state) {
+    state.PauseTiming();
+    for (int i = 0; i < state.range(0); ++i)
+      if constexpr (std::is_integral<T>::value) {
+        std::uniform_int_distribution<T> dis(1,100000);
+        data.push_back(dis(gen));
+      } else {
+        std::uniform_real_distribution<T> dis(1,100000);
+        data.push_back(dis(gen));
+      }
+    auto s = data.begin();
+    state.ResumeTiming();
+    for (int j = 0; j < state.range(1); ++j) {
+      benchmark::DoNotOptimize(y = log(*s++));
+    }
   }
   dummydouble += y;
 }
-BENCHMARK_TEMPLATE(BM_log, float);
-BENCHMARK_TEMPLATE(BM_log, double);
-BENCHMARK_TEMPLATE(BM_log2, float);
-BENCHMARK_TEMPLATE(BM_log2, double);
-BENCHMARK_TEMPLATE(BM_log2r, float);
-BENCHMARK_TEMPLATE(BM_log2r, double);
-BENCHMARK_TEMPLATE(BM_log2r, uint64_t);
-BENCHMARK_TEMPLATE(BM_log2r, uint32_t);
+BENCHMARK_TEMPLATE(BM_log, float)->Args({1<<2, 128})
+  ->Args({1<<2, 256})->Args({1<<2, 512})->Args({1<<2, 1024});
+BENCHMARK_TEMPLATE(BM_log, double)->Args({1<<2, 128})
+  ->Args({1<<2, 256})->Args({1<<2, 512})->Args({1<<2, 1024});
+
+template<typename T>
+void BM_log2(benchmark::State& state) {
+  std::vector<T> data;
+  uint32_t y;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  T s;
+  for (auto _ : state) {
+    state.PauseTiming();
+    for (int i = 0; i < state.range(0); ++i)
+      if constexpr (std::is_integral<T>::value) {
+        std::uniform_int_distribution<T> dis(1,100000);
+        data.push_back(dis(gen));
+      } else {
+        std::uniform_real_distribution<T> dis(1,100000);
+        data.push_back(dis(gen));
+      }
+    auto s = data.begin();
+    state.ResumeTiming();
+    for (int j = 0; j < state.range(1); ++j) {
+      benchmark::DoNotOptimize(y = log2(*s++));
+    }
+  }
+  dummydouble += y;
+}
+BENCHMARK_TEMPLATE(BM_log2, float)->Args({1<<2, 128})
+  ->Args({1<<2, 256})->Args({1<<2, 512})->Args({1<<2, 1024});
+BENCHMARK_TEMPLATE(BM_log2, double)->Args({1<<2, 128})
+  ->Args({1<<2, 256})->Args({1<<2, 512})->Args({1<<2, 1024});
+
+template<typename T>
+void BM_log2r(benchmark::State& state) {
+  std::vector<T> data;
+  uint32_t y;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  T s;
+  for (auto _ : state) {
+    state.PauseTiming();
+    for (int i = 0; i < state.range(0); ++i)
+      if constexpr (std::is_integral<T>::value) {
+        std::uniform_int_distribution<T> dis(1,100000);
+        data.push_back(dis(gen));
+      } else {
+        std::uniform_real_distribution<T> dis(1,100000);
+        data.push_back(dis(gen));
+      }
+    state.ResumeTiming();
+    auto s = data.begin();
+    for (int j = 0; j < state.range(1); ++j) {
+      benchmark::DoNotOptimize(y = log2rough(*s++));
+    }
+  }
+  dummydouble += y;
+}
+BENCHMARK_TEMPLATE(BM_log2r, float)->Args({1<<2, 128})
+  ->Args({1<<2, 256})->Args({1<<2, 512})->Args({1<<2, 1024});
+BENCHMARK_TEMPLATE(BM_log2r, double)->Args({1<<2, 128})
+  ->Args({1<<2, 256})->Args({1<<2, 512})->Args({1<<2, 1024});
+BENCHMARK_TEMPLATE(BM_log2r, uint32_t)->Args({1<<2, 128})
+  ->Args({1<<2, 256})->Args({1<<2, 512})->Args({1<<2, 1024});
+BENCHMARK_TEMPLATE(BM_log2r, uint64_t)->Args({1<<2, 128})
+  ->Args({1<<2, 256})->Args({1<<2, 512})->Args({1<<2, 1024});
 
 static double table[9] = {1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8 };
 
@@ -359,12 +393,15 @@ BENCHMARK(BM_LogCast);
 void BM_clock_gettime (benchmark::State& state) {
   struct timespec start, end;
   clock_gettime(CLOCK_REALTIME, &start);
-  while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(clock_gettime(CLOCK_REALTIME, &end));
+  for (auto _ : state) {
+    for (int i = 0; i < state.range(1); ++i) {
+      benchmark::DoNotOptimize(clock_gettime(CLOCK_REALTIME, &end));
+    }
   }
   dummy64 += end.tv_nsec - start.tv_nsec;
 }
-BENCHMARK(BM_clock_gettime);
+BENCHMARK(BM_clock_gettime)->Args({1<<2, 128})
+  ->Args({1<<2, 256})->Args({1<<2, 512})->Args({1<<2, 1024});
 
 template<typename T>
 void BM_clock(benchmark::State& state) {
@@ -379,6 +416,29 @@ void BM_clock(benchmark::State& state) {
 BENCHMARK_TEMPLATE(BM_clock, std::chrono::steady_clock);
 BENCHMARK_TEMPLATE(BM_clock, std::chrono::system_clock);
 BENCHMARK_TEMPLATE(BM_clock, std::chrono::high_resolution_clock);
+
+template<typename T, typename S, typename R>
+static S tdiff() {
+  using namespace std::chrono;
+  auto start = T::now();
+  auto end = T::now();
+  return duration<S,R>(end - start).count();
+}
+
+template<typename T, typename S, typename R>
+void BM_clockdiff(benchmark::State& state) {
+
+  S s;
+  while (state.KeepRunning()) {
+    //benchmark::DoNotOptimize(x += std::chrono::duration(std::chrono::steady_clock::now() - start).count());
+    benchmark::DoNotOptimize(s = tdiff<T,S,R>());
+  }
+  dummy64 += s;
+}
+BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, float, std::ratio<1,1>);
+BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, double, std::micro);
+BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, uint64_t, std::nano);
+BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, long int, std::ratio<1,uint64_t(1e9)>);
 
 void BM_atomic(benchmark::State& state, std::memory_order mo) {
   std::atomic<uint64_t> a(0);
