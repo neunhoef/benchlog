@@ -24,10 +24,10 @@ static void BM_std_log_histogram(benchmark::State& state) {
     state.PauseTiming();
     for (int i = 0; i < state.range(0); ++i)
       if constexpr (std::is_integral<T>::value) {
-        std::uniform_int_distribution<T> dis(1,100000);
+        std::uniform_int_distribution<T> dis(-10,20);
         data.push_back(dis(gen));
       } else {
-        std::uniform_real_distribution<T> dis(1,100000);
+        std::uniform_real_distribution<T> dis(-10,20);
         data.push_back(dis(gen));
       }
     auto s = data.begin();
@@ -37,7 +37,7 @@ static void BM_std_log_histogram(benchmark::State& state) {
     }
   }
 }
-BENCHMARK_TEMPLATE(BM_std_log_histogram, double)->Args({1, 128});
+BENCHMARK_TEMPLATE(BM_std_log_histogram, double)->Args({1<<2, 128})->Args({1<<2, 256})->Args({1<<2, 1024})->Args({1<<2, 2048});
 
 BENCHMARK_MAIN();
 
