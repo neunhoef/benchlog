@@ -57,7 +57,7 @@ static void BM_gauge_add(benchmark::State& state) {
     typename std::conditional<
       std::is_integral<T>::value,
       std::uniform_int_distribution<T>,
-      std::uniform_real_distribution<T>>::type dis(-1.,1.);
+      std::uniform_real_distribution<T>>::type dis(0.,1.);
 
     for (int i = 0; i < state.range(1); ++i) {
       data.push_back(dis(gen));
@@ -75,6 +75,16 @@ BENCHMARK_TEMPLATE(BM_gauge_add, uint64_t)->Args({1, 128})->Args({1, 256})->Args
 BENCHMARK_TEMPLATE(BM_gauge_add, double)->Args({1, 128})->Args({1, 256})->Args({1, 512})->Args({1, 1024})->Args({1, 2048});
 BENCHMARK_TEMPLATE(BM_gauge_add, float)->Args({1, 128})->Args({1, 256})->Args({1, 512})->Args({1, 1024})->Args({1, 2048});
 
+
+static void BM_counter_inc(benchmark::State& state) {
+  auto c = Counter(0, "", "");
+  for (auto _ : state) {
+    c.count();
+  }
+  std::string hs;
+  c.toPrometheus(hs);
+}
+BENCHMARK(BM_counter_inc)->Args({1, 128})->Args({1, 256})->Args({1, 512})->Args({1, 1024})->Args({1, 2048});
 
 BENCHMARK_MAIN();
 
