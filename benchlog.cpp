@@ -4,6 +4,7 @@
 #include <vector>
 #include "string.h"
 #include <random>
+#include <omp.h>
 #include <chrono>
 #include <atomic>
 
@@ -440,11 +441,27 @@ BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, double, std::micro);
 BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, uint64_t, std::nano);
 BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, long int, std::ratio<1,uint64_t(1e9)>);
 
+void BM_atomic_omp(benchmark::State& state, std::memory_order mo) {
+  std::atomic<uint64_t> a(0);
+  for (auto _ : state) {
+#pragma omp parallel for shared(a) num_threads(8)
+    for (int i = 0; i < 10000000; i++) {
+      benchmark::DoNotOptimize(a.fetch_add(i, mo));
+    }
+  }
+  dummy64 += a;
+}
+BENCHMARK_CAPTURE(BM_atomic_omp, memory_order_seq_cst, std::memory_order_seq_cst);
+BENCHMARK_CAPTURE(BM_atomic_omp, memory_order_relaxed, std::memory_order_relaxed);
+
 void BM_atomic(benchmark::State& state, std::memory_order mo) {
   std::atomic<uint64_t> a(0);
-  while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(a.fetch_add(1, mo));
+  for (auto _ : state) {
+    for (int i = 0; i < 10000000; i++) {
+      benchmark::DoNotOptimize(a.fetch_add(i, mo));
+    }
   }
+  dummy64 += a;
 }
 BENCHMARK_CAPTURE(BM_atomic, memory_order_seq_cst, std::memory_order_seq_cst);
 BENCHMARK_CAPTURE(BM_atomic, memory_order_relaxed, std::memory_order_relaxed);

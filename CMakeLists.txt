@@ -9,17 +9,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Threads REQUIRED)
 find_package(benchmark REQUIRED)
 
-link_directories("/home/neunhoef/lib")
-
 add_executable(benchlog
   benchlog.cpp
 )
-
-target_include_directories(benchlog
-  PUBLIC "/home/neunhoef/include"
+add_executable(benchmetrics
+  benchmetrics.cpp Metrics.cpp
 )
 
 target_link_libraries(benchlog
+  benchmark::benchmark
+  ${CMAKE_THREAD_LIBS_INIT}
+)
+target_link_libraries(benchmetrics
   benchmark::benchmark
   ${CMAKE_THREAD_LIBS_INIT}
 )
