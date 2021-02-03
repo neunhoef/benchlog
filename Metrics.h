@@ -190,7 +190,7 @@ template<typename T> class Gauge : public Metric {
 
 std::ostream& operator<< (std::ostream&, Metrics::hist_type const&);
 
-enum ScaleType { Fixed, Linear, Logarithmic };
+enum ScaleType { Fixed, Linear, Logarithmic, RoughLogarithmic };
 
 template<typename T>
 struct scale_t {
@@ -363,8 +363,57 @@ struct log_scale_t : public scale_t<T> {
   }
 
  private:
-  T _base, _div;
-  double _lbase;
+  T _base, _div, _lbase;
+};
+
+template<typename T>
+struct logr_scale_t : public scale_t<T> {
+ public:
+
+  using value_type = T;
+  static constexpr ScaleType scale_type = RoughLogarithmic;
+
+  logr_scale_t(T const& base, T const& low, T const& high, size_t n) :
+    scale_t<T>(low, high, n), _base(base) {
+    _base = 2.0;
+  }
+  virtual ~logr_scale_t() = default;
+  /**
+   * @brief index for val
+   * @param val value
+   * @return    index
+   */
+
+  size_t pos(T const& val) const {
+    T tmp = (val < this->_first) ? this->_first : val;
+    int32_t l = log2rough((tmp - this->_min) * _mul) - _off;
+    l /= _div;
+    size_t p = static_cast<size_t>(l);
+    return p < this->_n ? p : this->_n - 1;
+  }
+  
+#if defined ARANGODB_BITS
+  /**
+   * @brief Dump to builder
+   * @param b Envelope
+   */
+  virtual void toVelocyPack(VPackBuilder& b) const override {
+    b.add("scale-type", VPackValue("rough-logarithmic"));
+    b.add("base", VPackValue(_base));
+    scale_t<T>::toVelocyPack(b);
+  }
+#endif
+  /**
+   * @brief Base
+   * @return base
+   */
+  T base() const {
+    return _base;
+  }
+
+ private:
+  int32_t _off, _mul, _min, _div;
+  T _base;
 };
 
 template<typename T>
@@ -464,7 +513,7 @@ template<typename Scale> class Histogram : public Metric {
     } else {
       _c[pos(t)] += n;
     }
-    //records(t);
+    records(t);
   }
   value_type const& low() const { return _scale.low(); }
   value_type const& high() const { return _scale.high(); }
