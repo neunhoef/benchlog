@@ -332,7 +332,7 @@ struct log_scale_t : public scale_t<T> {
     }
     _div = log(this->_delim.front() - low);
     TRI_ASSERT(_div > T(0));
-    _lbase = log(_base);
+    _lbase = log(static_cast<double>(_base));
   }
   virtual ~log_scale_t() = default;
   /**
@@ -363,7 +363,7 @@ struct log_scale_t : public scale_t<T> {
   }
 
  private:
-  T _base, _div, _lbase;
+  double _base, _lbase, _div;
 };
 
 template<typename T>
@@ -508,12 +508,12 @@ template<typename Scale> class Histogram : public Metric {
   void count(value_type const& t, uint64_t n) {
     if (t < _scale.delims().front()) {
       _c[0] += n;
-    } else if (t >= _scale.delims().back()) {
-      _c[_n] += n;
+    } else if (t >= _scale.high()) {
+      _c[_n+1] += n;
     } else {
       _c[pos(t)] += n;
     }
-    records(t);
+    //records(t);
   }
   value_type const& low() const { return _scale.low(); }
   value_type const& high() const { return _scale.high(); }
