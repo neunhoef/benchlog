@@ -441,7 +441,8 @@ BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, double, std::micro);
 BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, uint64_t, std::nano);
 BENCHMARK_TEMPLATE(BM_clockdiff, std::chrono::steady_clock, long int, std::ratio<1,uint64_t(1e9)>);
 
-void BM_atomic_omp(benchmark::State& state, std::memory_order mo) {
+template <std::memory_order mo>
+void BM_atomic_omp(benchmark::State& state) {
   std::atomic<uint64_t> a(0);
   for (auto _ : state) {
 #pragma omp parallel for shared(a) num_threads(8)
@@ -451,10 +452,11 @@ void BM_atomic_omp(benchmark::State& state, std::memory_order mo) {
   }
   dummy64 += a;
 }
-BENCHMARK_CAPTURE(BM_atomic_omp, memory_order_seq_cst, std::memory_order_seq_cst);
-BENCHMARK_CAPTURE(BM_atomic_omp, memory_order_relaxed, std::memory_order_relaxed);
+BENCHMARK_TEMPLATE(BM_atomic_omp, std::memory_order_seq_cst);
+BENCHMARK_TEMPLATE(BM_atomic_omp, std::memory_order_relaxed);
 
-void BM_atomic(benchmark::State& state, std::memory_order mo) {
+template<std::memory_order mo>
+void BM_atomic(benchmark::State& state) {
   std::atomic<uint64_t> a(0);
   for (auto _ : state) {
     for (int i = 0; i < 10000000; i++) {
@@ -463,8 +465,8 @@ void BM_atomic(benchmark::State& state, std::memory_order mo) {
   }
   dummy64 += a;
 }
-BENCHMARK_CAPTURE(BM_atomic, memory_order_seq_cst, std::memory_order_seq_cst);
-BENCHMARK_CAPTURE(BM_atomic, memory_order_relaxed, std::memory_order_relaxed);
+BENCHMARK_TEMPLATE(BM_atomic, std::memory_order_seq_cst);
+BENCHMARK_TEMPLATE(BM_atomic, std::memory_order_relaxed);
 
 static std::atomic<uint64_t> counts[10];
 static void initHisto() {

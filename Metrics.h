@@ -250,19 +250,23 @@ struct scale_t {
       b.add(VPackValue(i));
     }
   }
+#endif
   /**
    * @brief dump to
    */
   std::ostream& print(std::ostream& o) const {
+#if defined ARANGODB_BITS    
     VPackBuilder b;
     {
       VPackObjectBuilder bb(&b);
       this->toVelocyPack(b);
     }
     o << b.toJson();
+#else
+    o << "lowest value: " << _low << ", highest value: " << _high << ", type: " << typeid(T).name() << ", range: ";
+#endif
     return o;
   }
-#endif
  protected:
   T _low, _high;
   std::vector<T> _delim;
@@ -460,9 +464,8 @@ template<typename Scale> class Histogram : public Metric {
     } else {
       _c[pos(t)] += n;
     }
-    records(t);
+    //records(t);
   }
-
   value_type const& low() const { return _scale.low(); }
   value_type const& high() const { return _scale.high(); }
 
