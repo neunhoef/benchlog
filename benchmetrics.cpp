@@ -39,10 +39,14 @@ static void BM_std_log_histogram(benchmark::State& state) {
   }
   std::string hs;
   h.toPrometheus(hs);
+  //std::cout << hs << std::endl;
 }
-BENCHMARK_TEMPLATE(BM_std_log_histogram, uint64_t)->Args({1, 128})->Args({1, 256})->Args({1, 512})->Args({1, 1024})->Args({1, 2048});
-BENCHMARK_TEMPLATE(BM_std_log_histogram, double)->Args({1, 128})->Args({1, 256})->Args({1, 512})->Args({1, 1024})->Args({1, 2048});
-BENCHMARK_TEMPLATE(BM_std_log_histogram, float)->Args({1, 128})->Args({1, 256})->Args({1, 512})->Args({1, 1024})->Args({1, 2048});
+BENCHMARK_TEMPLATE(BM_std_log_histogram, uint64_t)
+  ->Args({1, 128})->Args({1, 256})->Args({1, 512})->Args({1, 1024})->Args({1, 2048});
+BENCHMARK_TEMPLATE(BM_std_log_histogram, double)
+  ->Args({1, 128})->Args({1, 256})->Args({1, 512})->Args({1, 1024})->Args({1, 2048});
+BENCHMARK_TEMPLATE(BM_std_log_histogram, float)
+  ->Args({1, 128})->Args({1, 256})->Args({1, 512})->Args({1, 1024})->Args({1, 2048});
 
 template<typename T>
 static void BM_gauge_add(benchmark::State& state) {

@@ -98,10 +98,10 @@ template<typename T> class Gauge : public Metric {
   Gauge(T const& val, std::string const& name, std::string const& help,
         std::string const& labels = std::string())
     : Metric(name, help, labels), _g(val) { }
-  
+
   Gauge(Gauge const&) = delete;
   ~Gauge() = default;
-  
+
   std::ostream& print(std::ostream&) const;
 
   T fetch_add(T t, std::memory_order mo = std::memory_order_relaxed) noexcept {
@@ -114,12 +114,12 @@ template<typename T> class Gauge : public Metric {
       return tmp;
     }
   }
-  
+
   Gauge<T>& operator+=(T const& t) noexcept {
     fetch_add(t, std::memory_order_relaxed);
     return *this;
   }
-  
+
   // prefix increment
   Gauge<T>& operator++() noexcept {
     fetch_add(1, std::memory_order_relaxed);
@@ -139,28 +139,28 @@ template<typename T> class Gauge : public Metric {
       return tmp;
     }
   }
-  
+
   Gauge<T>& operator-=(T const& t) noexcept {
     fetch_sub(t, std::memory_order_relaxed);
     return *this;
   }
-  
+
   // prefix decrement
   Gauge<T>& operator--() noexcept {
     fetch_sub(1, std::memory_order_relaxed);
     return *this;
   }
-  
+
   // postfix decrement. as this would be inefficient, we simply forbid it
   Gauge<T>& operator--(int) = delete;
-  
+
   Gauge<T>& operator*=(T const& t) noexcept {
     T tmp(_g.load(std::memory_order_relaxed));
     do {
     } while (!_g.compare_exchange_weak(tmp, tmp * t));
     return *this;
   }
-  
+
   Gauge<T>& operator/=(T const& t) noexcept {
     TRI_ASSERT(t != T(0));
     T tmp(_g.load(std::memory_order_relaxed));
@@ -168,14 +168,14 @@ template<typename T> class Gauge : public Metric {
     } while (!_g.compare_exchange_weak(tmp, tmp / t));
     return *this;
   }
-  
+
   Gauge<T>& operator=(T const& t) noexcept {
     _g.store(t, std::memory_order_relaxed);
     return *this;
   }
-  
+
   T load(std::memory_order mo = std::memory_order_relaxed) const noexcept { return _g.load(mo); }
-  
+
   void toPrometheus(std::string& result) const override {
     result += "\n#TYPE " + name() + " gauge\n";
     result += "#HELP " + name() + " " + help() + "\n" + name();
@@ -234,7 +234,7 @@ struct scale_t {
   std::vector<T> const& delims() const {
     return _delim;
   }
-  
+
   /**
    * @brief dump to builder
    */
@@ -255,7 +255,7 @@ struct scale_t {
    * @brief dump to
    */
   std::ostream& print(std::ostream& o) const {
-#if defined ARANGODB_BITS    
+#if defined ARANGODB_BITS
     VPackBuilder b;
     {
       VPackObjectBuilder bb(&b);
@@ -309,7 +309,7 @@ struct fixed_scale_t : public scale_t<T> {
     scale_t<T>::toVelocyPack(b);
   }
 #endif
-  
+
  private:
   T _base, _div;
 };
@@ -324,6 +324,7 @@ struct log_scale_t : public scale_t<T> {
   log_scale_t(T const& base, T const& low, T const& high, size_t n) :
     scale_t<T>(low, high, n), _base(base) {
     TRI_ASSERT(base > T(0));
+    _n = n;
     double nn = -1.0 * (n - 1);
     for (auto& i : this->_delim) {
       i = static_cast<T>(
@@ -341,7 +342,13 @@ struct log_scale_t : public scale_t<T> {
    * @return    index
    */
   size_t pos(T const& val) const {
-    return static_cast<size_t>(1+std::floor((log(val - this->_low)-_div)/_lbase));
+    if (val < this->_delim.front()) {
+      return 0;
+    } else if (val >= this->high()) {
+      return _n;
+    } else {
+      return static_cast<size_t>(1+std::floor((log(val - this->_low)-this->_div)/this->_lbase));
+    }
   }
 #if defined ARANGODB_BITS
   /**
@@ -363,7 +370,7 @@ struct log_scale_t : public scale_t<T> {
   }
 
  private:
-  double _base, _lbase, _div;
+  double _base, _lbase, _div, _n;
 };
 
 template<typename T>
@@ -391,7 +398,7 @@ struct logr_scale_t : public scale_t<T> {
     size_t p = static_cast<size_t>(l);
     return p < this->_n ? p : this->_n - 1;
   }
-  
+
 #if defined ARANGODB_BITS
   /**
    * @brief Dump to builder
@@ -452,7 +459,7 @@ struct lin_scale_t : public scale_t<T> {
     scale_t<T>::toVelocyPack(b);
   }
 #endif
-  
+
  private:
   T _base, _div;
 };
@@ -506,14 +513,10 @@ template<typename Scale> class Histogram : public Metric {
   }
 
   void count(value_type const& t, uint64_t n) {
-    if (t < _scale.delims().front()) {
-      _c[0] += n;
-    } else if (t >= _scale.high()) {
-      _c[_n+1] += n;
-    } else {
-      _c[pos(t)] += n;
-    }
-    //records(t);
+    _c[_scale.pos(t)]+=n;
+#ifdef USE_MAINTAINER_MODE
+    records(t);
+#endif
   }
   value_type const& low() const { return _scale.low(); }
   value_type const& high() const { return _scale.high(); }
