@@ -29,6 +29,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <string.h>
 #include <vector>
 
 #if defined ARANGODB_BITS
@@ -374,6 +375,25 @@ struct log_scale_t : public scale_t<T> {
 };
 
 template<typename T>
+inline int32_t log2rough(T x) {
+  return log2rough((double) x);
+}
+
+template<>
+inline int32_t log2rough<double>(double x) {
+  uint64_t y;
+  memcpy(&y, &x, 8);
+  return ((int32_t)(y >> 52) & 0x7ff) - 1023;
+}
+
+template<>
+inline int32_t log2rough<float>(float x) {
+  uint32_t y;
+  memcpy(&y, &x, 4);
+  return (int32_t) ((y >> 23) & 0xff) - 127;
+}
+
+template<typename T>
 struct logr_scale_t : public scale_t<T> {
  public:
 
@@ -382,7 +402,27 @@ struct logr_scale_t : public scale_t<T> {
 
   logr_scale_t(T const& base, T const& low, T const& high, size_t n) :
     scale_t<T>(low, high, n), _base(base) {
-    _base = 2.0;
+    // We want to have n buckets so we are looking for n-1 delimiters
+    // between low and high. The first bucket will include everything below
+    // low and everything up to the first delimiter. The last bucket will
+    // include everything higher than the last delimiter and everything
+    // above high.
+    // First we compute _mul with this equation:
+    //   low + _base ^ n / _mul = high
+    // Thus: _mul = _base ^ n / (high - low)
+    // Then the boundaries are:
+    //   low + _base ^ i / _mul   for  i = 1, 2, ..., n-1
+    // In the end, we compute the bucket with this formula:
+    //   log2rough((val - low) * _mul) / _div
+    // where _div is 1 for base 2 and 3 for base 8.
+    // We only have to be careful for the boundaries.
+    _mul = static_cast<T>(
+              std::pow((double) base, (double) n) / (double) (high - low));
+    for (size_t i = 0; i < n-1; ++i) {
+      this->_delim[i] = low + std::pow((double) base, (double) i+1) / _mul;
+    }
+    _div = (base == 2) ? 1 : 3;
+    _inFirst = (this->_low + this->_delim[0]) / 2;
   }
   virtual ~logr_scale_t() = default;
   /**
@@ -392,11 +432,10 @@ struct logr_scale_t : public scale_t<T> {
    */
 
   size_t pos(T const& val) const {
-    T tmp = (val < this->_first) ? this->_first : val;
-    int32_t l = log2rough((tmp - this->_min) * _mul) - _off;
-    l /= _div;
+    T tmp = (val < this->_inFirst) ? this->_inFirst : val;
+    int32_t l = log2rough((tmp - this->_low) * _mul) / _div;
     size_t p = static_cast<size_t>(l);
-    return p < this->_n ? p : this->_n - 1;
+    return (p < this->_n) ? p : this->_n - 1;
   }
 
 #if defined ARANGODB_BITS
@@ -419,8 +458,10 @@ struct logr_scale_t : public scale_t<T> {
   }
 
  private:
-  int32_t _off, _mul, _min, _div;
   T _base;
+  T _mul;
+  T _inFirst;
+  int32_t _div;
 };
 
 template<typename T>
